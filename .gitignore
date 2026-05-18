@@ -1,0 +1,10 @@
+.backup
+.cache
+.log
+.temp
+.vscode
+tools/Data/Mappings/*
+tools/UAssetCLI/*
+tools/*.exe
+output/**/*
+patches/**/*

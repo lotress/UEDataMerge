@@ -1,0 +1,49 @@
+{
+  "debug": true,
+  "paths": {
+    "logPath": "output/log.txt",
+    "UAssetCLIPath": "tools/UAssetCLI/UAssetCLI.dll",
+    "retocPath": "tools/retoc.exe",
+    "repakPath": "tools/repak.exe",
+    "UAssetDataFolder": "tools/Data",
+    "tempFolder": "output/temp",
+    "outputFolder": "output/mods",
+    "baseFolder": "output/base",
+    "userPatchFolder": "patches",
+    "resultFolder": "output"
+  },
+  "games": {
+    "sb": {
+      "name": "Stellar Blade",
+      "mapName": "StellarBlade",
+      "ID": "SB",
+      "engineVersion": "4_26",
+      "version": "1.4.1",
+      "zen": true
+    },
+    "soa": {
+      "name": "Sands Of Aura",
+      "mapName": "SandsOfAura",
+      "ID": "SandsOfAura",
+      "engineVersion": "4_25",
+      "version": "1.01.25",
+      "repakPackOptions": ["--version", "V11"]
+    },
+    "pal7": {
+      "name": "仙剑奇侠传7",
+      "ID": "Pal7",
+      "engineVersion": "4_25"
+    },
+    "kena": {
+      "name": "Kena Bridge Of Spirits",
+      "ID": "Kena",
+      "engineVersion": "4_27"
+    },
+    "wd": {
+      "name": "Wanted Dead",
+      "ID": "WDGame",
+      "engineVersion": "4_27",
+      "zen": true
+    }
+  }
+}
