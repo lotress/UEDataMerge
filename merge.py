@@ -3,6 +3,7 @@ import json
 import os
 import os.path as osp
 import logging
+import sys
 from functools import reduce
 from dataclasses import dataclass, field
 
@@ -18,10 +19,13 @@ class GameConfig:
 
 class Paths:
   def __init__(self, gameFolder=None):
-    try:
-      me = osp.dirname(osp.abspath(__file__))
-    except:
-      me = os.getcwd()
+    if getattr(sys, 'frozen', False):
+      me = os.path.dirname(sys.executable)
+    else:
+      try:
+        me = osp.dirname(osp.abspath(__file__))
+      except:
+        me = os.getcwd()
     self.configPath = osp.join(me, 'config.json')
     self.logPath = osp.join(me, 'output/log.txt')
     self.tempFolder = osp.join(me, 'output/temp')
@@ -408,3 +412,14 @@ class Tools:
     with open(osp.join(self.tempFolder, jsonPath), 'w') as fp:
       json.dump(base.toValue(), fp, **dumpOpt, ensure_ascii=False)
     self.fromjson(asset)
+
+def init():
+  paths = Paths()
+  with open(paths.configPath, 'r', encoding='utf-8') as fp:
+    configData = json.load(fp)
+  DEBUG = configData.get('debug', False)
+  paths.__dict__.update(configData.get('paths', {}))
+  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
+                      filename=paths.logPath, filemode='w')
+  app = PortableApp(paths.UAssetDataFolder, 'UAssetGUI')
+  return paths, app, configData, DEBUG

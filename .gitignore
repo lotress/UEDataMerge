@@ -3,8 +3,12 @@
 .log
 .temp
 .vscode
+__pycache__
 tools/Data/Mappings/*
 tools/UAssetCLI/*
 tools/*.exe
 output/**/*
 patches/**/*
+/build
+/dist
+/*.spec

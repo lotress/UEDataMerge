@@ -1,5 +1,6 @@
 import argparse
 import sys
+from merge import GameConfig, Tools, init
 
 def parse_args():
   parser = argparse.ArgumentParser(description='UE Mod Tool')
@@ -71,3 +72,13 @@ def scan(tools):
     print(f'Data table {asset} will be modified by packages below:')
     for mod in mods:
       print(f'-\t{mod if mod else 'user json file'}')
+
+if __name__ == '__main__':
+  paths, app, configData, DEBUG = init()
+  args = startup(paths, configData)
+  game = GameConfig(**configData['games'][args.gameName.lower()])
+  tools = Tools(game, paths, DEBUG)
+  if args.command == 'scan':
+    scan(tools)
+  elif args.command == 'merge':
+    merge(app, tools, args)
