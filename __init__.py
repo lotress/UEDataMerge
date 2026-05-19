@@ -18,10 +18,6 @@ class ProgressDialog(QDialog):
     layout.addWidget(self.progressBar)
     self.statusLabel = QLabel()
     layout.addWidget(self.statusLabel)
-    self.closeBtn = QPushButton(QCoreApplication.translate("UEDataMerge", "Close"))
-    self.closeBtn.setEnabled(False)
-    self.closeBtn.clicked.connect(self.accept)
-    layout.addWidget(self.closeBtn)
 
   def setRange(self, minimum, maximum):
     self.progressBar.setRange(minimum, maximum)
@@ -189,6 +185,7 @@ class Plugin(mobase.IPluginTool):
       assetsToPatch = tools.mixinUserMods(assetsToPatch)
       dialog.setStatus(f'Merging {len(assetsToPatch)} data tables of {count} mod packages. This may take several minutes, please wait.')
       tools.prepare(packages)
+      dialog.setStatus(self.tr('Unpacking data tables...'))
       for package in packages:
         tools.unpack(package, package)
       tools.unpackBase(assetsToPatch)
@@ -204,16 +201,15 @@ class Plugin(mobase.IPluginTool):
           else:
             dialog.setStatus('Patching user json file')
           dialog.setValue(progress)
+      dialog.setStatus(self.tr('Repacking data tables into new mod...'))
       tools.repack()
       tools.cleanUp()
       app.cleanUp()
-      dialog.setStatus(self.tr('Merge completed successfully!'))
+      print(self.tr('Merge completed successfully!'))
     except Exception as e:
-      dialog.setStatus(f'Error: {e}')
+      print(f'Error: {e}')
     finally:
-      dialog.closeBtn.setEnabled(True)
-      dialog.progressBar.setValue(dialog.progressBar.maximum())
-      dialog.exec()
+      dialog.close()
 
 createPlugin = Plugin
 paths, app, configData, DEBUG = init()
