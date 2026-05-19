@@ -1,1 +1,1 @@
-pyinstaller --onefile --clean -p "" --name UEDataMerge cli.py
+pyinstaller --onefile --clean -p "" --distpath . --name UEDataMerge cli.py

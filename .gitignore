@@ -12,3 +12,4 @@ patches/**/*
 /build
 /dist
 /*.spec
+/*.exe
