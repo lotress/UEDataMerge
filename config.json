@@ -30,7 +30,7 @@
       "repakPackOptions": ["--version", "V11"]
     },
     "pal7": {
-      "name": "仙剑奇侠传7",
+      "name": "Sword and Fairy 7",
       "ID": "Pal7",
       "engineVersion": "4_25"
     },

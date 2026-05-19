@@ -4,7 +4,6 @@ import os
 import os.path as osp
 import logging
 import sys
-from functools import reduce
 from dataclasses import dataclass, field
 
 @dataclass
@@ -46,7 +45,7 @@ ADDITION = 1
 isDataList = lambda v: isinstance(v, list) and all(isinstance(i, dict) and i.get('Name') is not None for i in v)
 selectType = lambda v: StructItem if isDataList(v.get('Value')) and any(i['Name'] == 'ID' for i in v['Value']) else DictItem
 toValue = lambda v: v.toValue() if hasattr(v, 'toValue') else [i.toValue() if hasattr(i, 'toValue') else i for i in v] if isinstance(v, list) else v
-joinLists = lambda lists: reduce(lambda a, b: a + b, lists) if lists else []
+joinLists = lambda lists: sum(lists, []) if lists else []
 def delNone(k):
   def g(o):
     if isinstance(o, dict) and k in o and o[k] is None:
@@ -248,6 +247,10 @@ class Tools:
     self.modFolder = osp.join(self.basePakFolder, '~mods')
   def getMapName(self):
     return f'{self.game.mapName}_{self.game.version}' if self.game.version else self.game.mapName
+  def getBasePacks(self):
+    return [osp.join(self.basePakFolder, f) for f in next(os.walk(self.basePakFolder))[2] if f.endswith(self.getPackExt())]
+  def checkGame(self):
+    return osp.exists(self.basePakFolder) and len(self.getBasePacks())
   def cleanUp(self):
     import shutil
     if osp.exists(self.tempFolder):
@@ -344,8 +347,7 @@ class Tools:
     if self.game.zen:
       self.unpackBaseZen(assets)
     else:
-      modPaths = [osp.join(self.basePakFolder, f) for f in next(os.walk(self.basePakFolder))[2] if f.endswith(self.getPackExt())]
-      for p in modPaths:
+      for p in self.getBasePacks():
         self.unpackLegacy(p, '', True, assets=assets)
   def unpackLegacy(self, modPath, modName, base=False, assets=None):
     allAssets = set(self.listAssetsLegacy(modPath))
@@ -399,6 +401,7 @@ class Tools:
     base = UAsset(self.tempFolder, jsonPath)
     for package in mods:
       folder = self.userPatchFolder
+      yield package
       if package is not None:
         print(f'Patching from mod: {package}')
         modName = getFileName(package)

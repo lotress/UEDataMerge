@@ -55,7 +55,7 @@ def merge(app, tools, args):
     tools.unpack(package, package)
   tools.unpackBase(assetsToPatch)
   for asset, mods in assetsToPatch.items():
-    tools.mergeAsset(asset, mods)
+    list(tools.mergeAsset(asset, mods))
   tools.repack()
   tools.cleanUp()
   app.cleanUp()
