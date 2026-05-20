@@ -7,6 +7,7 @@ __pycache__
 tools/Data/Mappings/*
 tools/UAssetCLI/*
 tools/*.exe
+tools/*.dll
 output/**/*
 patches/**/*
 /build

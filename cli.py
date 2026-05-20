@@ -1,5 +1,6 @@
 import argparse
 import sys
+import os.path as osp
 from merge import GameConfig, Tools, init
 
 def parse_args():
@@ -46,17 +47,20 @@ def startup(paths, configData):
 def merge(app, tools, args):
   app.prepare()
   packages = tools.listPackages(tools.modFolder)
-  assetsToPatch, count = tools.getAssetsToPatch(packages, args.all)
-  assetsToPatch = tools.mixinUserMods(assetsToPatch)
+  assetsToPatch, count = tools.getAssetsToPatch(packages)
+  assetsToPatch = tools.mixinUserMods(assetsToPatch, args.all)
   print(f'Merging {len(assetsToPatch)} data tables of {count} mod packages.')
   print('This may take servarl minutes, please wait.')
+  print('Unpacking data tables...')
   tools.prepare(packages)
   for package in packages:
     tools.unpack(package, package)
   tools.unpackBase(assetsToPatch)
   for asset, mods in assetsToPatch.items():
     list(tools.mergeAsset(asset, mods))
+  print('Repacking data tables into new mod...')
   tools.repack()
+  print('Merge completed successfully!')
   tools.cleanUp()
   app.cleanUp()
 
@@ -71,12 +75,12 @@ def scan(tools):
   for asset, mods in assetsToPatch.items():
     print(f'Data table {asset} will be modified by packages below:')
     for mod in mods:
-      print(f'-\t{mod if mod else 'user json file'}')
+      print(f'-\t{mod if mod else osp.join(paths.userPatchFolder, asset)}')
 
 if __name__ == '__main__':
   paths, app, configData, DEBUG = init()
   args = startup(paths, configData)
-  game = GameConfig(**configData['games'][args.gameName.lower()])
+  game = GameConfig(**configData['games'][args.game.lower()])
   tools = Tools(game, paths, DEBUG)
   if args.command == 'scan':
     scan(tools)

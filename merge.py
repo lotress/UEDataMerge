@@ -19,7 +19,7 @@ class GameConfig:
 class Paths:
   def __init__(self, gameFolder=None):
     if getattr(sys, 'frozen', False):
-      me = os.path.dirname(sys.executable)
+      me = osp.dirname(osp.abspath(sys.executable))
     else:
       try:
         me = osp.dirname(osp.abspath(__file__))
@@ -221,6 +221,7 @@ class PortableApp:
                     shell=True, check=True, capture_output=True)
     except subprocess.CalledProcessError:
       self.cleanup()
+      raise
 
 regexChunkId = re.compile(r'pakchunk(\d+).+?\.pak', re.IGNORECASE)
 regexExtracted = re.compile(r'Extracted\s+(\d+)\s+\((\d+)\s+failed\)')
@@ -289,16 +290,12 @@ class Tools:
     return result
   def listAssetsLegacy(self, packFile):
     result = self.runAndCapture([self.repakPath, 'list', packFile])
-    if result.returncode != 0:
-      return []
     lines = (line for line in result.stdout.splitlines() if line.strip())
     return [osp.splitext(uassetName)[0] for uassetName in lines if uassetName.endswith('.uasset')]
   def listAssetsZen(self, packFile):
     result = self.runAndCapture([self.retocPath, 'list', '--path', '--mount-folder', self.basePakFolder, packFile])
-    if result.returncode != 0:
-      return []
     lines = result.stdout.splitlines()
-    data = (line.split() for line in lines if line.strip())
+    data = filter(lambda t: len(t) > 3, (line.split() for line in lines if line.strip()))
     return [osp.splitext(uassetName.removeprefix('../../../'))[0] for _, _, _, uassetName in data if uassetName.endswith('.uasset')]
   def listAssets(self, packFile):
     return self.listAssetsZen(packFile) if self.game.zen else self.listAssetsLegacy(packFile)
@@ -315,7 +312,7 @@ class Tools:
       return sorted(pn) + sorted(pp)
     else:
       return sorted(packages, key=getChunkId)
-  def getAssetsToPatch(self, packages, all=True):
+  def getAssetsToPatch(self, packages):
     assetMap = {}
     packages = self.sortPackages(packages)
     count = 0
@@ -325,10 +322,6 @@ class Tools:
         count += 1
       for asset in assets:
         assetMap.setdefault(asset, []).append(p)
-    if not all:
-      for k in list(assetMap):
-        if len(assetMap[k]) == 1:
-          del assetMap[k]
     return assetMap, count
   def unpack(self, modPath, package):
     if osp.isfile(modPath):
@@ -384,16 +377,20 @@ class Tools:
     self.runAndCapture([self.repakPath, '-g', self.game.ID, 'pack', *self.game.repakPackOptions, osp.join(self.outputFolder, self.myName), osp.join(self.resultFolder, f'{self.myName}.pak')])
   def repack(self):
     self.toZen() if self.game.zen else self.repackLegacy()
-  def mixinMods(self, assetsToPatch, package, modAssets):
+  def mixinMods(self, assetsToPatch, package, modAssets, all=True):
     for mod in modAssets:
       if mod in assetsToPatch:
         assetsToPatch[mod].append(package)
       else:
         assetsToPatch[mod] = [package]
+    if not all:
+      for k in list(assetsToPatch):
+        if len(assetsToPatch[k]) == 1:
+          del assetsToPatch[k]
     return assetsToPatch
-  def mixinUserMods(self, assetsToPatch):
+  def mixinUserMods(self, assetsToPatch, all=True):
     userMods = [getFilePath(osp.relpath(p, self.userPatchFolder).replace('\\', '/')) for p in listFiles('.json', self.userPatchFolder)]
-    return self.mixinMods(assetsToPatch, None, userMods)
+    return self.mixinMods(assetsToPatch, None, userMods, all)
   def mergeAsset(self, asset, mods):
     print(f'\n--- Processing asset: {asset} ---')
     jsonPath = getJsonPath(asset)
@@ -408,7 +405,7 @@ class Tools:
         self.tojson(modName, asset)
         folder = self.tempFolder
       else:
-        print(f'Patching user json file')
+        print('Patching ' + osp.join(self.userPatchFolder, jsonPath))
       mod = UAsset(folder, jsonPath)
       base.patchBy(mod)
     dumpOpt = dict(indent=2) if self.DEBUG else dict(separators=(',', ':'))
@@ -421,7 +418,8 @@ def init():
   with open(paths.configPath, 'r', encoding='utf-8') as fp:
     configData = json.load(fp)
   DEBUG = configData.get('debug', False)
-  paths.__dict__.update(configData.get('paths', {}))
+  for k, v in configData.get('paths', {}).items():
+    paths.__dict__[k] = osp.abspath(v)
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
                       filename=paths.logPath, filemode='w')
   app = PortableApp(paths.UAssetDataFolder, 'UAssetGUI')

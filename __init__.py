@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from .merge import GameConfig, Tools, init
 import mobase
-from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtCore import QCoreApplication, qInfo, qWarning
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMessageBox, QComboBox, QVBoxLayout, QHBoxLayout, QDialog, QCheckBox, QPushButton, QProgressBar, QLabel
 
@@ -28,6 +28,10 @@ class ProgressDialog(QDialog):
 
   def setStatus(self, text):
     self.statusLabel.setText(text)
+    QCoreApplication.processEvents()
+
+  def setTitle(self, text):
+    self.setWindowTitle(text)
     QCoreApplication.processEvents()
 
 class Plugin(mobase.IPluginTool):
@@ -165,13 +169,13 @@ class Plugin(mobase.IPluginTool):
     assetsToPatch, count = tools.getAssetsToPatch(packages)
     assetsToPatch = tools.mixinUserMods(assetsToPatch)
     if not len(assetsToPatch):
-      print('There are no data table mods to be merged.')
+      qInfo('There are no data table mods to be merged.')
       return
-    print(f'There are {count} mod packages modifying {len(assetsToPatch)} data tables.')
+    qInfo(f'There are {count} mod packages modifying {len(assetsToPatch)} data tables.')
     for asset, mods in assetsToPatch.items():
-      print(f'Data table {asset} will be modified by packages below:')
+      qInfo(f'Data table {asset} will be modified by packages below:')
       for mod in mods:
-        print(f'-\t{mod if mod else 'user json file'}')
+        qInfo(f'-\t{mod if mod else 'user json file'}')
 
   def __merge(self):
     tools = self.__tools
@@ -181,9 +185,9 @@ class Plugin(mobase.IPluginTool):
     try:
       app.prepare()
       packages = sum((tools.listPackages(folder) for folder in self.__modFolders()), [])
-      assetsToPatch, count = tools.getAssetsToPatch(packages, self.__args.all)
-      assetsToPatch = tools.mixinUserMods(assetsToPatch)
-      dialog.setStatus(f'Merging {len(assetsToPatch)} data tables of {count} mod packages. This may take several minutes, please wait.')
+      assetsToPatch, count = tools.getAssetsToPatch(packages)
+      assetsToPatch = tools.mixinUserMods(assetsToPatch, self.__args.all)
+      dialog.setTitle(f'Merging {len(assetsToPatch)} data tables of {count} mod packages. This may take several minutes, please wait.')
       tools.prepare(packages)
       dialog.setStatus(self.tr('Unpacking data tables...'))
       for package in packages:
@@ -203,12 +207,18 @@ class Plugin(mobase.IPluginTool):
           dialog.setValue(progress)
       dialog.setStatus(self.tr('Repacking data tables into new mod...'))
       tools.repack()
-      tools.cleanUp()
-      app.cleanUp()
-      print(self.tr('Merge completed successfully!'))
+      qInfo(self.tr('Merge completed successfully!'))
     except Exception as e:
-      print(f'Error: {e}')
+      qWarning(f'Error: {e}')
     finally:
+      try:
+        tools.cleanUp()
+      except Exception:
+        pass
+      try:
+        app.cleanUp()
+      except Exception:
+        pass
       dialog.close()
 
 createPlugin = Plugin
