@@ -1,9 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from .merge import GameConfig, Tools, init
-import mobase
-from PyQt6.QtCore import QCoreApplication, qInfo, qWarning
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QMessageBox, QComboBox, QVBoxLayout, QHBoxLayout, QDialog, QCheckBox, QPushButton, QProgressBar, QLabel
+import mobase # pyright: ignore[reportMissingModuleSource]
+from PyQt6.QtCore import QCoreApplication, qInfo, qWarning # type: ignore
+from PyQt6.QtGui import QIcon # type: ignore
+from PyQt6.QtWidgets import QMessageBox, QComboBox, QVBoxLayout, QHBoxLayout, QDialog, QCheckBox, QPushButton, QProgressBar, QLabel # type: ignore
 
 @dataclass
 class Args:
