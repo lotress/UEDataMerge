@@ -9,6 +9,7 @@ def parse_args():
   parser.add_argument('gameFolder', nargs='?', help='Game folder path')
   parser.add_argument('-g', '--game', metavar='gameName', help='Specify game name')
   parser.add_argument('-a', '--all', metavar='all', default=False, help='Including data tables which appeared in only ONE mod')
+  parser.add_argument('-k', '--keep', metavar='keep', default=False, help=f'Keep the generated mod in this tool\'s output folder ({paths.resultFolder}) instead of installing to your game.')
   return parser.parse_args()
 
 def get_available_games(configData):
@@ -60,6 +61,8 @@ def merge(app, tools, args):
     list(tools.mergeAsset(asset, mods))
   print('Repacking data tables into new mod...')
   tools.repack()
+  if not args.keep:
+    tools.moveResult(args.gameFolder)
   print('Merge completed successfully!')
   tools.cleanUp()
   app.cleanUp()
@@ -82,6 +85,9 @@ if __name__ == '__main__':
   args = startup(paths, configData)
   game = GameConfig(**configData['games'][args.game.lower()])
   tools = Tools(game, paths, DEBUG)
+  if not tools.checkGame():
+    print("This tool could not find any game files for the current game setting. Please choose the correct one or add your settings by editing config.json in this tool's folder.")
+    exit(-1)
   if args.command == 'scan':
     scan(tools)
   elif args.command == 'merge':

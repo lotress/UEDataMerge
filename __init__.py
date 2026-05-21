@@ -3,7 +3,7 @@ from .merge import GameConfig, Tools, init
 import mobase # pyright: ignore[reportMissingModuleSource]
 from PyQt6.QtCore import QCoreApplication, qInfo, qWarning # type: ignore
 from PyQt6.QtGui import QIcon # type: ignore
-from PyQt6.QtWidgets import QMessageBox, QComboBox, QVBoxLayout, QHBoxLayout, QDialog, QCheckBox, QPushButton, QProgressBar, QLabel # type: ignore
+from PyQt6.QtWidgets import QMessageBox, QComboBox, QVBoxLayout, QHBoxLayout, QDialog, QCheckBox, QPushButton, QProgressBar, QLabel, QRadioButton, QLineEdit, QDialogButtonBox # type: ignore
 
 @dataclass
 class Args:
@@ -14,6 +14,7 @@ class ProgressDialog(QDialog):
     super().__init__(parent)
     self.setWindowTitle(title)
     layout = QVBoxLayout(self)
+    layout.addWidget(QLabel(self.tr("This may take several minutes, please wait.")))
     self.progressBar = QProgressBar()
     layout.addWidget(self.progressBar)
     self.statusLabel = QLabel()
@@ -34,13 +35,128 @@ class ProgressDialog(QDialog):
     self.setWindowTitle(text)
     QCoreApplication.processEvents()
 
+class ResultDialog(QDialog):
+  """合并完成后的结果对话框：让用户选择安装方式并输入Mod名称"""
+
+  def __init__(self, defaultName, parent=None):
+    super().__init__(parent)
+    self.setWindowTitle(self.tr("Merge Completed"))
+    layout = QVBoxLayout(self)
+
+    nameLabel = QLabel(self.tr("Mod name:"))
+    self.nameEdit = QLineEdit(defaultName)
+    layout.addWidget(nameLabel)
+    layout.addWidget(self.nameEdit)
+
+    self.installRadio = QRadioButton(self.tr("Install as a new mod in Mod Organizer"))
+    self.installRadio.setChecked(True)
+    self.keepRadio = QRadioButton(self.tr("Keep files in output directory"))
+    layout.addWidget(self.installRadio)
+    layout.addWidget(self.keepRadio)
+
+    buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+    buttonBox.accepted.connect(self.accept)
+    buttonBox.rejected.connect(self.reject)
+    layout.addWidget(buttonBox)
+
+  def tr(self, str):
+    return QCoreApplication.translate("UEDataMerge", str)
+
+  def shouldInstall(self):
+    return self.installRadio.isChecked()
+
+  def modName(self):
+    return self.nameEdit.text()
+
+class MergeDialog(QDialog):
+  """主对话框：游戏选择、扫描/合并操作入口"""
+
+  def __init__(self, game, args, parent=None):
+    super().__init__(parent)
+    self.game = game
+    self.args = args
+    self.tools = None
+    self.action = None
+    if not self.game:
+      self.findGame()
+    self.buildUI()
+
+  def tr(self, str):
+    return QCoreApplication.translate("UEDataMerge", str)
+
+  def findGame(self):
+    games = ((k, Tools(GameConfig(**v), paths, DEBUG)) for k, v in configData['games'].items())
+    self.game, self.tools = next(((k, tools) for k, tools in games if tools.checkGame()), (None, None))
+    if self.game is None:
+      QMessageBox.critical(self, self.tr("Unrecognized game"), self.tr("This tool could not find any game files after trying all known settings. You can add your settings by editing config.json in this tool's folder."))
+
+  def buildUI(self):
+    self.setWindowTitle(self.tr("UE Data Mod Merge"))
+    layout = QVBoxLayout()
+
+    layout.addWidget(self.choseGame())
+
+    allCheckBox = QCheckBox(self.tr("Also merge data tables covered by only 1 mod (no conflict, merging is optional)"))
+    allCheckBox.setChecked(self.args.all)
+    allCheckBox.toggled.connect(lambda checked: setattr(self.args, 'all', checked))
+    layout.addWidget(allCheckBox)
+
+    self.scanBtn = QPushButton(self.tr("Scan"))
+    self.mergeBtn = QPushButton(self.tr("Merge"))
+    saveBtn = QPushButton(self.tr("Save Settings & Exit"))
+
+    self.scanBtn.setToolTip(self.tr("Scan active mods in priority order, and log which data tables are modified by which mods."))
+    self.scanBtn.clicked.connect(self.onScan)
+    self.mergeBtn.setToolTip(self.tr("Extract data tables modified by active mods in priority order and merge them on top of the original game data to produce a new mod."))
+    self.mergeBtn.clicked.connect(self.onMerge)
+    saveBtn.clicked.connect(self.accept)
+
+    buttonLayout = QHBoxLayout()
+    buttonLayout.addWidget(self.scanBtn)
+    buttonLayout.addWidget(self.mergeBtn)
+    buttonLayout.addWidget(saveBtn)
+    layout.addLayout(buttonLayout)
+
+    self.setLayout(layout)
+    self.updateGame(self.game)
+
+  def onScan(self):
+    self.action = 'scan'
+    self.accept()
+
+  def onMerge(self):
+    self.action = 'merge'
+    self.accept()
+
+  def choseGame(self):
+    keys = list(configData['games'])
+    values = [self.tr(v['name']) for v in configData['games'].values()]
+    listWidget = QComboBox()
+    listWidget.addItems(values)
+    listWidget.showEvent = lambda _: listWidget.setCurrentText(self.tr(configData['games'][self.game]['name']) if self.game else '')
+    listWidget.showEvent(None)
+    listWidget.setToolTip(self.tr("Select the game you modded."))
+    listWidget.currentIndexChanged.connect(lambda newIndex: self.updateGame(keys[newIndex]))
+    return listWidget
+
+  def updateGame(self, game):
+    if not game: return
+    v = configData['games'][game]
+    self.tools = Tools(GameConfig(**v), paths, DEBUG)
+    if self.tools.checkGame():
+      self.game = game
+      self.mergeBtn.setEnabled(True)
+      self.scanBtn.setEnabled(True)
+    else:
+      self.mergeBtn.setEnabled(False)
+      self.scanBtn.setEnabled(False)
+      QMessageBox.critical(self, self.tr("Unrecognized game"), self.tr("This tool could not find any game files for the current game setting. Please choose the correct one or add your settings by editing config.json in this tool's folder."))
+
 class Plugin(mobase.IPluginTool):
   def init(self, organizer):
     self.__organizer = organizer
     self.__game = self.pluginSetting("game")
     self.__args = Args(all=self.pluginSetting("all"))
-    self.__mergeBtn = QPushButton(self.tr("Merge"))
-    self.__scanBtn = QPushButton(self.tr("Scan"))
     return True
 
   def name(self):
@@ -71,7 +187,7 @@ class Plugin(mobase.IPluginTool):
     self.__organizer.setPluginSetting(self.name(), name, value)
 
   def settings(self):
-    return [mobase.PluginSetting('game', self.tr('The game you modded.'), None), mobase.PluginSetting('all', self.tr('Include data tables that appear in only one mod.'), False)]
+    return [mobase.PluginSetting('game', self.tr('The game you modded.'), ''), mobase.PluginSetting('all', self.tr('Include data tables that appear in only one mod.'), False)]
 
   def icon(self):
     return QIcon()
@@ -84,39 +200,15 @@ class Plugin(mobase.IPluginTool):
 
   def display(self):
     paths.gameFolder = self.__organizer.managedGame().gameDirectory().absolutePath()
-    if not self.__game:
-      self.__findGame()
-    dialog = QDialog(self.__parentWidget)
-    dialog.setWindowTitle(self.tr(self.name()))
-    layout = QVBoxLayout()
-    layout.addWidget(self.__choseGame())
-
-    allCheckBox = QCheckBox(self.tr("Also merge data tables covered by only 1 mod (no conflict, merging is optional)"))
-    allCheckBox.setChecked(self.__args.all)
-    allCheckBox.toggled.connect(lambda checked: setattr(self.__args, 'all', checked))
-    layout.addWidget(allCheckBox)
-
-    action = [None]
-    self.__scanBtn.setToolTip(self.tr("Scan active mods in priority order, and log which data tables are modified by which mods."))
-    self.__scanBtn.clicked.connect(lambda: (action.__setitem__(0, 'scan'), dialog.accept()))
-    self.__mergeBtn.setToolTip(self.tr("Extract data tables modified by active mods in priority order and merge them on top of the original game data to produce a new mod."))
-    self.__mergeBtn.clicked.connect(lambda: (action.__setitem__(0, 'merge'), dialog.accept()))
-    self.__updateGame(self.__game)
-    saveBtn = QPushButton(self.tr("Save Settings & Exit"))
-    saveBtn.clicked.connect(dialog.accept)
-
-    buttonLayout = QHBoxLayout()
-    buttonLayout.addWidget(self.__scanBtn)
-    buttonLayout.addWidget(self.__mergeBtn)
-    buttonLayout.addWidget(saveBtn)
-    layout.addLayout(buttonLayout)
-
-    dialog.setLayout(layout)
+    dialog = MergeDialog(self.__game, self.__args, self.__parentWidget)
     dialog.exec()
+    self.__game = dialog.game
+    self.__tools = dialog.tools
+    self.__args = dialog.args
     self.__saveSettings()
-    if action[0] == 'scan':
+    if dialog.action == 'scan':
       self.__scan()
-    elif action[0] == 'merge':
+    elif dialog.action == 'merge':
       self.__merge()
 
   def __modFolders(self):
@@ -127,37 +219,6 @@ class Plugin(mobase.IPluginTool):
     # Scan mods in priority order
     for mod in activated_mods:
       yield modList.getMod(mod).absolutePath()
-
-  def __updateGame(self, game):
-    if not game: return
-    v = configData['games'][game]
-    self.__tools = Tools(GameConfig(**v), paths, DEBUG)
-    if self.__tools.checkGame():
-      self.__game = game
-      self.__mergeBtn.setEnabled(True)
-      self.__scanBtn.setEnabled(True)
-    else:
-      self.__mergeBtn.setEnabled(False)
-      self.__scanBtn.setEnabled(False)
-      QMessageBox.critical(self.__parentWidget, self.tr("Unrecognized game"), self.tr("This tool could not find any game files for the current game setting. Please choose the correct one or add your settings by editing config.json in this tool's folder."))
-
-  def __findGame(self):
-    games = ((k, Tools(GameConfig(**v), paths, DEBUG)) for k, v in configData['games'].items())
-    self.__game, self.__tools = next(((k, tools) for k, tools in games if tools.checkGame()), (None, None))
-    if self.__game is None:
-      QMessageBox.critical(self.__parentWidget, self.tr("Unrecognized game"), self.tr("This tool could not find any game files after trying all known settings. You can add your settings by editing config.json in this tool's folder."))
-
-  def __choseGame(self):
-    keys = list(configData['games'])
-    values = [self.tr(v['name']) for v in configData['games'].values()]
-    listWidget = QComboBox()
-    listWidget.addItems(values)
-    listWidget.showEvent = lambda _: listWidget.setCurrentText(self.tr(configData['games'][self.__game]['name']) if self.__game else '')
-    listWidget.showEvent(None)
-    listWidget.setToolTip(self.tr("Select the game you modded."))
-
-    listWidget.currentIndexChanged.connect(lambda newIndex: self.__updateGame(keys[newIndex]))
-    return listWidget
 
   def __saveSettings(self):
     self.setPluginSetting('game', self.__game)
@@ -187,7 +248,7 @@ class Plugin(mobase.IPluginTool):
       packages = sum((tools.listPackages(folder) for folder in self.__modFolders()), [])
       assetsToPatch, count = tools.getAssetsToPatch(packages)
       assetsToPatch = tools.mixinUserMods(assetsToPatch, self.__args.all)
-      dialog.setTitle(f'Merging {len(assetsToPatch)} data tables of {count} mod packages. This may take several minutes, please wait.')
+      dialog.setTitle(f'Merging {len(assetsToPatch)} data tables of {count} mod packages.')
       tools.prepare(packages)
       dialog.setStatus(self.tr('Unpacking data tables...'))
       for package in packages:
@@ -203,13 +264,16 @@ class Plugin(mobase.IPluginTool):
           if package is not None:
             dialog.setStatus(f'Patching from mod: {package}')
           else:
-            dialog.setStatus('Patching user json file')
+            dialog.setStatus(f'Patching user json file {asset}')
           dialog.setValue(progress)
       dialog.setStatus(self.tr('Repacking data tables into new mod...'))
       tools.repack()
+      resultDialog = ResultDialog(tools.myName, self.__parentWidget)
+      if resultDialog.exec() == QDialog.DialogCode.Accepted and resultDialog.shouldInstall():
+        self.__createMod(resultDialog.modName())
       qInfo(self.tr('Merge completed successfully!'))
     except Exception as e:
-      qWarning(f'Error: {e}')
+      qWarning(str(e))
     finally:
       try:
         tools.cleanUp()
@@ -220,6 +284,16 @@ class Plugin(mobase.IPluginTool):
       except Exception:
         pass
       dialog.close()
+
+  def __createMod(self, name):
+    newMod = self.__organizer.createMod(name)
+    if not newMod:
+      return # User canceled
+    version = self.__tools.moveResult(newMod.absolutePath()).split('-')[0]
+    newMod.addCategory('Gameplay')
+    newMod.setVersion(mobase.VersionInfo(version))
+    self.__organizer.modList().setActive(newMod.name(), True)
+    self.__organizer.refresh(True)
 
 createPlugin = Plugin
 paths, app, configData, DEBUG = init()

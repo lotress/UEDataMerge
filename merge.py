@@ -3,6 +3,7 @@ import json
 import os
 import os.path as osp
 import logging
+logger = logging.getLogger('UEDataMerge')
 import sys
 from dataclasses import dataclass, field
 
@@ -25,6 +26,7 @@ class Paths:
         me = osp.dirname(osp.abspath(__file__))
       except:
         me = os.getcwd()
+    self.__me = me
     self.configPath = osp.join(me, 'config.json')
     self.logPath = osp.join(me, 'output/log.txt')
     self.tempFolder = osp.join(me, 'output/temp')
@@ -37,6 +39,9 @@ class Paths:
     self.repakPath = osp.join(me, 'tools/repak.exe')
     self.UAssetDataFolder = osp.join(me, 'tools/Data')
     self.gameFolder = gameFolder
+  def update(self, other):
+    for k, v in other.items():
+      self.__dict__[k] = osp.join(self.__me, v)
 
 RegexPathPart = re.compile(r'([^[\]]+)|\[(\d+)\]')
 PrimitiveTypes = {int, str, float, bool, type(None)}
@@ -81,7 +86,7 @@ class DataItem:
         self[k] = v
   def logChanges(self):
     for changeType, path, newValue in self.changes:
-      logging.info(f'REPLACE {path} with {newValue}' if changeType == REPLACE else f'ADD {path} = {newValue}')
+      logger.info(f'REPLACE {path} with {newValue}' if changeType == REPLACE else f'ADD {path} = {newValue}')
 class DictItem(DataItem):
   def __init__(self, data, path):
     for k, v in data.items():
@@ -156,7 +161,7 @@ class UAsset(DictItem):
   def patchBy(self, other):
     if type(other) != UAsset:
       raise ValueError(f'Type mismatch: {type(self)} != {type(other)}')
-    logging.info(f'Patching {self.assetPath} with {osp.join(other.baseFolder, other.assetPath)}')
+    logger.info(f'Patching {self.assetPath} with {osp.join(other.baseFolder, other.assetPath)}')
     if 'Exports' in self.data and 'Exports' in other.data and len(self.data['Exports']) == len(other.data['Exports']):
       for i, v in enumerate(other.data['Exports']):
         if hasattr(self.data['Exports'][i], 'patchBy'):
@@ -285,7 +290,7 @@ class Tools:
   def runAndCapture(self, cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-      logging.error(f"Error: {result.stderr}")
+      logger.error(f"Error: {result.stderr}")
       raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout, stderr=result.stderr)
     return result
   def listAssetsLegacy(self, packFile):
@@ -354,7 +359,7 @@ class Tools:
       line = result.stdout.splitlines()[-1]
       match = regexExtracted.match(line)
       if match and sum(map(int, match.groups())) == 0:
-        logging.warning(f'Asset {asset} not found in base packages')
+        logger.warning(f'Asset {asset} not found in base packages')
   def toLegacy(self, modPath, modName, base=False):
     output = self.baseFolder if base else self.outputFolder
     outputPath = osp.join(output, modName)
@@ -412,15 +417,30 @@ class Tools:
     with open(osp.join(self.tempFolder, jsonPath), 'w') as fp:
       json.dump(base.toValue(), fp, **dumpOpt, ensure_ascii=False)
     self.fromjson(asset)
+  def moveResult(self, dest):
+    dest = osp.join(dest, f'{self.game.ID}/Content/Paks/~mods')
+    os.makedirs(dest, exist_ok=True)
+    for f in next(os.walk(self.resultFolder))[2]:
+      if f.startswith(self.myName):
+        os.replace(osp.join(self.resultFolder, f), osp.join(dest, f))
+    import time
+    now = time.strftime("%Y%m%d-%H%M%S")
+    for handler in logger.handlers[:]:
+      handler.close()
+      logger.removeHandler(handler)
+    os.replace(self.logPath, osp.join(dest, f'UEDataMerge-{now}.log'))
+    return now
 
 def init():
   paths = Paths()
   with open(paths.configPath, 'r', encoding='utf-8') as fp:
     configData = json.load(fp)
   DEBUG = configData.get('debug', False)
-  for k, v in configData.get('paths', {}).items():
-    paths.__dict__[k] = osp.abspath(v)
-  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
-                      filename=paths.logPath, filemode='w')
+  paths.update(configData.get('paths', {}))
+  logger.setLevel(logging.INFO)
+  logger.propagate = False
+  fileHandler = logging.FileHandler(paths.logPath, mode='w')
+  fileHandler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+  logger.addHandler(fileHandler)
   app = PortableApp(paths.UAssetDataFolder, 'UAssetGUI')
   return paths, app, configData, DEBUG
