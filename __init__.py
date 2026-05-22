@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .merge import GameConfig, Tools, init
+from .merge import GameConfig, Tools, init, deduplicate
 import mobase # pyright: ignore[reportMissingModuleSource]
 from PyQt6.QtCore import QCoreApplication, qInfo, qWarning # type: ignore
 from PyQt6.QtGui import QIcon # type: ignore
@@ -220,13 +220,16 @@ class Plugin(mobase.IPluginTool):
     for mod in activated_mods:
       yield modList.getMod(mod).absolutePath()
 
+  def __getPackages(self):
+    return deduplicate(sum((self.__tools.listPackages(folder) for folder in self.__modFolders()), []))
+
   def __saveSettings(self):
     self.setPluginSetting('game', self.__game)
     self.setPluginSetting('all', self.__args.all)
 
   def __scan(self):
     tools = self.__tools
-    packages = sum((tools.listPackages(folder) for folder in self.__modFolders()), [])
+    packages = self.__getPackages()
     assetsToPatch, count = tools.getAssetsToPatch(packages)
     assetsToPatch = tools.mixinUserMods(assetsToPatch)
     if not len(assetsToPatch):
@@ -245,7 +248,7 @@ class Plugin(mobase.IPluginTool):
     dialog.show()
     try:
       app.prepare()
-      packages = sum((tools.listPackages(folder) for folder in self.__modFolders()), [])
+      packages = self.__getPackages()
       assetsToPatch, count = tools.getAssetsToPatch(packages)
       assetsToPatch = tools.mixinUserMods(assetsToPatch, self.__args.all)
       dialog.setTitle(f'Merging {len(assetsToPatch)} data tables of {count} mod packages.')

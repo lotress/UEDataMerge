@@ -431,6 +431,8 @@ class Tools:
     os.replace(self.logPath, osp.join(dest, f'UEDataMerge-{now}.log'))
     return now
 
+deduplicate = lambda packages: list({osp.basename(n): n for n in packages}.values())
+
 def init():
   paths = Paths()
   with open(paths.configPath, 'r', encoding='utf-8') as fp:
