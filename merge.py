@@ -439,7 +439,7 @@ def init():
     configData = json.load(fp)
   DEBUG = configData.get('debug', False)
   paths.update(configData.get('paths', {}))
-  logger.setLevel(logging.INFO)
+  logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
   logger.propagate = False
   fileHandler = logging.FileHandler(paths.logPath, mode='w')
   fileHandler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
