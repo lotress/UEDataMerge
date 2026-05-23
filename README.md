@@ -6,7 +6,7 @@ When multiple mods modify the same game data table (.uasset) in an Unreal Engine
 
 Unreal Engine游戏中有多个mod修改相同的游戏数据表(.uasset)时，只有最后载入的mod才生效；如果作为尊贵的玩家想全都要，这个工具就可以用来解决如此巨大的困扰。
 
-When I had the same need before, I was directed to jpabscale's [automod](https://jpabscale.github.io/automod). His tool can apply JSON patch patterns written in TOML to data tables, and can also diff FModel-extracted data table JSONs to generate patch patterns. However, automod is not easy to use: first, it requires installing about 4GB of Java and Scala dependencies plus nearly 2GB of Stellar Blade source data files; then users need to extract data tables with FModel themselves, and even write JSON patch patterns with a steep learning curve. The most critical issue was that when I solved all the preceding problems and tried to test automod with the smallest Stellar Blade data table — OOM! After consuming over 8GB of memory for a minute, it reported a beautiful Out Of Memory error. Thus my plan to merge mods fell through, and I had to make this tool myself using Python. Of course, I still express great gratitude to jpabscale's work; this tool also uses a bit of his configuration.
+When I had the same need before, I was directed to jpabscale's [automod](https://jpabscale.github.io/automod). His tool can apply JSON patch patterns written in TOML to data tables, and can also diff FModel-extracted data table JSONs to generate patch patterns. However, automod is not easy to use: first, it requires installing about 4GB of Java and Scala dependencies plus nearly 2GB of Stellar Blade source data files; then users need to extract data tables with FModel themselves, and even write JSON patch patterns with a steep learning curve. The most critical issue was that when I solved all the preceding problems and tried to test automod with the smallest Stellar Blade data table, after consuming over 8GB of memory for a minute, — OOM! it reported a pretty Out Of Memory error. Thus my plan to merge mods fell through, and I had to make this tool myself using Python. Of course, I still express great gratitude to jpabscale's work; this tool also uses a bit of his configuration.
 
 之前我有同样需要的时候会被指引去jpabscale的[automod](https://jpabscale.github.io/automod)，他的工具可用来将TOML编写的JSON patch pattern应用到数据表上，也可以将FModel提取的数据表JSON进行差异对比生成patch pattern。然而automod用起来并非易事，首先它需要安装4GB左右大小的Java和Scala依赖加上接近2GB的Stella Blade源数据文件，然后需要用户自己用FModel提取数据表，甚至需要自己编写学习曲线陡峭的JSON patch pattern；最关键的问题是当我解决前面所有问题，尝试用最小的Stella Blade数据表测试automod时，OOM!，在占用超过8GB内存1分钟后，它报告了一个漂亮的Out Of Memory错误，于是我合并mod的计划落空了，只好自己用Python做了这个工具。当然这里还是对jpabscale的工作表示非常感谢，这个工具也使用了一点他的配置。
 
@@ -17,6 +17,12 @@ This tool is prepared for players who completely don't want to study program and
 The source code is published on [my Github](https://github.com/lotress/UEDataMerge).
 
 源代码发布在[我的Github](https://github.com/lotress/UEDataMerge)。
+
+## ⚠️ Disclaimer / 注意
+
+This tool only transfers and merges raw data — it does not understand the meaning of any data fields, nor does it perform any semantic validation. It does not guarantee that multiple mods can coexist harmoniously after merging. The merged result may not conform to the design intent of any individual mod. Use at your own risk and always review the merge log to verify the outcome.
+
+本工具仅搬运和合并原始数据，不理解任何数据的含义，也不进行任何语义层面的校验。本工具不保证多个mod合并后能够和谐共存，合并后的效果可能不符合任何mod的设计意图。请自行承担风险，并务必查看合并日志以核实结果。
 
 ## Installation / 安装方式
 
