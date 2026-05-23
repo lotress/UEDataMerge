@@ -30,11 +30,11 @@ def startup(paths, configData):
 
   if gameFolder is None:
     print("Error: Missing required argument gameFolder")
-    print("Usage: UEDataMerge <command> <gameFolder> -g <gameName>")
+    print("Usage: UEDataMerge -g <gameName> <command> <gameFolder>")
     sys.exit(1)
   if gameName is None:
     print("Error: Missing required argument gameName")
-    print("Usage: UEDataMerge <command> <gameFolder> -g <gameName>")
+    print("Usage: UEDataMerge -g <gameName> <command> <gameFolder>")
     print_available_games(configData)
     sys.exit(1)
   if gameName.lower() not in configData['games']:

@@ -16,6 +16,8 @@ class GameConfig:
   version: str = None
   repakPackOptions: list = field(default_factory=list)
   zen: bool = False
+  includes: list = field(default_factory=list)
+  excludes: list = field(default_factory=list)
 
 class Paths:
   def __init__(self, gameFolder=None):
@@ -302,8 +304,17 @@ class Tools:
     lines = result.stdout.splitlines()
     data = filter(lambda t: len(t) > 3, (line.split() for line in lines if line.strip()))
     return [osp.splitext(uassetName.removeprefix('../../../'))[0] for _, _, _, uassetName in data if uassetName.endswith('.uasset')]
+  def filterAsset(self, asset):
+    includes = self.game.includes
+    excludes = self.game.excludes
+    if includes and not any(inc in asset for inc in includes):
+      return False
+    if excludes and any(exc in asset for exc in excludes):
+      return False
+    return True
   def listAssets(self, packFile):
-    return self.listAssetsZen(packFile) if self.game.zen else self.listAssetsLegacy(packFile)
+    assets = self.listAssetsZen(packFile) if self.game.zen else self.listAssetsLegacy(packFile)
+    return [asset for asset in assets if self.filterAsset(asset)]
   def listPackages(self, folder):
     if not osp.exists(folder):
       return []

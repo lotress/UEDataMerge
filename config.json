@@ -19,7 +19,9 @@
       "ID": "SB",
       "engineVersion": "4_26",
       "version": "1.4.1",
-      "zen": true
+      "zen": true,
+      "includes": ["SB/Content/Local/Data"],
+      "excludes": null
     },
     "soa": {
       "name": "Sands Of Aura",
@@ -27,17 +29,28 @@
       "ID": "SandsOfAura",
       "engineVersion": "4_25",
       "version": "1.01.25",
-      "repakPackOptions": ["--version", "V11"]
+      "repakPackOptions": ["--version", "V11"],
+      "includes": ["SandsOfAura/Content/Terrarium/Data"]
     },
     "pal7": {
       "name": "Sword and Fairy 7",
       "ID": "Pal7",
-      "engineVersion": "4_25"
+      "engineVersion": "4_25",
+      "includes": ["Pal7/Content/PreViewContent/DataTable"]
     },
     "kena": {
       "name": "Kena Bridge Of Spirits",
       "ID": "Kena",
-      "engineVersion": "4_27"
+      "engineVersion": "4_27",
+      "includes": [
+        "Kena/Content/Mochi/Core/Abilities",
+        "Kena/Content/Mochi/Core/Characters",
+        "Kena/Content/Mochi/Core/CosmeticsMode",
+        "Kena/Content/Mochi/Core/Damage",
+        "Kena/Content/Mochi/Core/Data",
+        "Kena/Content/Mochi/Core/Global"
+      ],
+      "excludes": ["/Textures"]
     },
     "wd": {
       "name": "Wanted Dead",
