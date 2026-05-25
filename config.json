@@ -20,8 +20,7 @@
       "engineVersion": "4_26",
       "version": "1.4.1",
       "zen": true,
-      "includes": ["SB/Content/Local/Data"],
-      "excludes": null
+      "includes": ["SB/Content/Local/Data"]
     },
     "soa": {
       "name": "Sands Of Aura",
@@ -56,7 +55,8 @@
       "name": "Wanted Dead",
       "ID": "WDGame",
       "engineVersion": "4_27",
-      "zen": true
+      "zen": true,
+      "excludes": ["/Textures", "/Meshes"]
     }
   }
 }
