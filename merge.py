@@ -61,6 +61,7 @@ def delNone(k):
     return 0
   return g
 traverse = lambda o, f: f(o) + sum(traverse(v, f) for v in o.values()) if isinstance(o, dict) else sum(traverse(i, f) for i in o) if isinstance(o, list) else 0
+shouldClip = lambda v, base: v.clipBy(base).isEmpty() if hasattr(v, 'clipBy') else v == base
 class DataItem:
   def __init__(self, data, path):
     self.changes = []
@@ -78,6 +79,8 @@ class DataItem:
         self.data[k] = v
   def __len__(self):
     return len(self.data)
+  def isEmpty(self):
+    return len(self.data) == 0
   def typeMismatch(self, k, v):
     return v is not None and self.data[k] is not None and type(v) not in PrimitiveTypes
   def patchBy(self, other):
@@ -89,6 +92,10 @@ class DataItem:
   def logChanges(self):
     for changeType, path, newValue in self.changes:
       logger.info(f'REPLACE {path} with {newValue}' if changeType == REPLACE else f'ADD {path} = {newValue}')
+  def toDelete(self, base):
+    if type(self) != type(base):
+      return []
+    return [k for k, v in self.data.items() if k in base.data and type(v) == type(base.data[k]) and shouldClip(v, base.data[k])]
 class DictItem(DataItem):
   def __init__(self, data, path):
     for k, v in data.items():
@@ -105,6 +112,10 @@ class DictItem(DataItem):
   def toValue(self):
     self.logChanges()
     return {k: toValue(v) for k, v in self.data.items()}
+  def clipBy(self, base):
+    for k in self.toDelete(base):
+      del self.data[k]
+    return self
 class ListItem(DataItem):
   def __init__(self, data, path):
     super().__init__(data, path)
@@ -137,6 +148,13 @@ class ListItem(DataItem):
     return [v.toValue() for v in self.data.values()]
   def typeMismatch(self, k, v):
     return not (isinstance(self.data[k], StructItem) and isinstance(v, DictItem))
+  def clipBy(self, base):
+    for k in self.toDelete(base):
+      if isinstance(self.data[k], StructItem):
+        self.idSet.discard(self.data[k].id)
+        self.idMap.pop(self.data[k].id, None)
+      del self.data[k]
+    return self
 class StructItem(DictItem):
   def __init__(self, data, path):
     super().__init__(data, path)
@@ -152,6 +170,15 @@ class StructItem(DictItem):
         item = value['ID']
         if item:
             item['Value'] = newId
+  def isEmpty(self):
+    return set(self.data.keys()) <= {'Name', 'ID'}
+  def clipBy(self, base):
+    if self.id != base.id:
+      raise ValueError(f'ID mismatch for struct {self.path}: {self.id} != {base.id}')
+    for k in self.toDelete(base):
+      if k != 'ID' and k != 'Name':
+        del self.data[k]
+    return self
 class UAsset(DictItem):
   def __init__(self, baseFolder, assetPath):
     self.baseFolder = baseFolder
@@ -241,6 +268,12 @@ getFileName = lambda path: osp.splitext(osp.basename(path))[0]
 getSubDirs = lambda t: [osp.join(t[0], d) for d in t[1]]
 getSubFiles = lambda t: [osp.join(t[0], d) for d in t[2]]
 listFiles = lambda ext, folder: list(filter(lambda x: x.endswith(ext), joinLists(map(getSubFiles, os.walk(folder)))))
+def filterOutLine(t):
+  l = len(t)
+  if l > 4:
+    print(t)
+    assert(False)
+  return l > 3
 def getChunkId(p):
   match = regexChunkId.match(p)
   return int(match.group(1)) if match else 0
@@ -302,7 +335,7 @@ class Tools:
   def listAssetsZen(self, packFile):
     result = self.runAndCapture([self.retocPath, 'list', '--path', '--mount-folder', self.basePakFolder, packFile])
     lines = result.stdout.splitlines()
-    data = filter(lambda t: len(t) > 3, (line.split() for line in lines if line.strip()))
+    data = filter(filterOutLine, (line.split() for line in lines if line.strip()))
     return [osp.splitext(uassetName.removeprefix('../../../'))[0] for _, _, _, uassetName in data if uassetName.endswith('.uasset')]
   def filterAsset(self, asset):
     includes = self.game.includes
@@ -412,6 +445,7 @@ class Tools:
     jsonPath = getJsonPath(asset)
     self.tojson(None, asset)
     base = UAsset(self.tempFolder, jsonPath)
+    result = UAsset(self.tempFolder, jsonPath)
     for package in mods:
       folder = self.userPatchFolder
       yield package
@@ -422,11 +456,11 @@ class Tools:
         folder = self.tempFolder
       else:
         print('Patching ' + osp.join(self.userPatchFolder, jsonPath))
-      mod = UAsset(folder, jsonPath)
-      base.patchBy(mod)
+      mod = UAsset(folder, jsonPath).clipBy(base)
+      result.patchBy(mod)
     dumpOpt = dict(indent=2) if self.DEBUG else dict(separators=(',', ':'))
     with open(osp.join(self.tempFolder, jsonPath), 'w') as fp:
-      json.dump(base.toValue(), fp, **dumpOpt, ensure_ascii=False)
+      json.dump(result.toValue(), fp, **dumpOpt, ensure_ascii=False)
     self.fromjson(asset)
   def moveResult(self, dest):
     dest = osp.join(dest, f'{self.game.ID}/Content/Paks/~mods')
