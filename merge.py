@@ -268,12 +268,6 @@ getFileName = lambda path: osp.splitext(osp.basename(path))[0]
 getSubDirs = lambda t: [osp.join(t[0], d) for d in t[1]]
 getSubFiles = lambda t: [osp.join(t[0], d) for d in t[2]]
 listFiles = lambda ext, folder: list(filter(lambda x: x.endswith(ext), joinLists(map(getSubFiles, os.walk(folder)))))
-def filterOutLine(t):
-  l = len(t)
-  if l > 4:
-    print(t)
-    assert(False)
-  return l > 3
 def getChunkId(p):
   match = regexChunkId.match(p)
   return int(match.group(1)) if match else 0
@@ -335,8 +329,8 @@ class Tools:
   def listAssetsZen(self, packFile):
     result = self.runAndCapture([self.retocPath, 'list', '--path', '--mount-folder', self.basePakFolder, packFile])
     lines = result.stdout.splitlines()
-    data = filter(filterOutLine, (line.split() for line in lines if line.strip()))
-    return [osp.splitext(uassetName.removeprefix('../../../'))[0] for _, _, _, uassetName in data if uassetName.endswith('.uasset')]
+    data = filter(lambda t: len(t) > 3, (line.split() for line in lines if line.strip()))
+    return [osp.splitext(uassetName.removeprefix('../../../'))[0] for *_, uassetName in data if uassetName.endswith('.uasset')]
   def filterAsset(self, asset):
     includes = self.game.includes
     excludes = self.game.excludes
