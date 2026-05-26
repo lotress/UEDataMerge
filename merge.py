@@ -214,6 +214,12 @@ class UAsset(DictItem):
 
 import subprocess
 
+subprocessArgs = dict(shell=True, check=True, capture_output=True)
+if os.name == 'nt':
+  subprocessArgs['creationflags'] = subprocess.CREATE_NO_WINDOW
+  si = subprocess.STARTUPINFO()
+  si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+  subprocessArgs['startupinfo'] = si
 class PortableApp:
   def __init__(self, local_data_path, targetPath):
     self.appdata_root = os.environ.get("LOCALAPPDATA")
@@ -251,10 +257,9 @@ class PortableApp:
     try:
       # 3. 创建目录联接 (Junction)
       # /J 不需要管理员权限
-      subprocess.run(f'mklink /J "{self.target_link_path}" "{self.local_data_path}"',
-                    shell=True, check=True, capture_output=True)
+      subprocess.run(f'mklink /J "{self.target_link_path}" "{self.local_data_path}"', **subprocessArgs)
     except subprocess.CalledProcessError:
-      self.cleanup()
+      self.cleanUp()
       raise
 
 regexChunkId = re.compile(r'pakchunk(\d+).+?\.pak', re.IGNORECASE)
@@ -317,7 +322,7 @@ class Tools:
   def getPackExt(self):
     return '.utoc' if self.game.zen else '.pak'
   def runAndCapture(self, cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, **subprocessArgs)
     if result.returncode != 0:
       logger.error(f"Error: {result.stderr}")
       raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout, stderr=result.stderr)
