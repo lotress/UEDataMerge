@@ -324,17 +324,17 @@ class Tools:
   def runAndCapture(self, cmd):
     result = subprocess.run(cmd, **subprocessArgs)
     if result.returncode != 0:
-      logger.error(f"Error: {result.stderr}")
+      logger.error(f"Error: {(str(result.stderr, 'utf-8'))}")
       raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout, stderr=result.stderr)
     return result
   def listAssetsLegacy(self, packFile):
     result = self.runAndCapture([self.repakPath, 'list', packFile])
-    lines = (line for line in result.stdout.splitlines() if line.strip())
+    lines = (str(line, 'utf-8') for line in result.stdout.splitlines() if line.strip())
     return [osp.splitext(uassetName)[0] for uassetName in lines if uassetName.endswith('.uasset')]
   def listAssetsZen(self, packFile):
     result = self.runAndCapture([self.retocPath, 'list', '--path', '--mount-folder', self.basePakFolder, packFile])
     lines = result.stdout.splitlines()
-    data = filter(lambda t: len(t) > 3, (line.split() for line in lines if line.strip()))
+    data = filter(lambda t: len(t) > 3, (str(line, 'utf-8').split() for line in lines if line.strip()))
     return [osp.splitext(uassetName.removeprefix('../../../'))[0] for *_, uassetName in data if uassetName.endswith('.uasset')]
   def filterAsset(self, asset):
     includes = self.game.includes
@@ -399,7 +399,7 @@ class Tools:
   def unpackBaseZen(self, assets):
     for asset in assets:
       result = self.runAndCapture([self.retocPath, 'to-legacy', '--no-shaders', '--no-compres-shaders', '--no-ver-check', '--version', f'UE{self.game.engineVersion}', '-f', asset, self.basePakFolder, self.baseFolder])
-      line = result.stdout.splitlines()[-1]
+      line = str(result.stdout.splitlines()[-1], 'utf-8')
       match = regexExtracted.match(line)
       if match and sum(map(int, match.groups())) == 0:
         logger.warning(f'Asset {asset} not found in base packages')
