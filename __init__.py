@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+from asyncio import tools
 from .merge import GameConfig, Tools, init, deduplicate
 import mobase # pyright: ignore[reportMissingModuleSource]
 from PyQt6.QtCore import QCoreApplication, qInfo, qWarning # type: ignore
@@ -251,6 +253,7 @@ class Plugin(mobase.IPluginTool):
       packages = self.__getPackages()
       assetsToPatch, count = tools.getAssetsToPatch(packages)
       assetsToPatch = tools.mixinUserMods(assetsToPatch, self.__args.all)
+      packages = tools.filterPackages(packages, assetsToPatch)
       dialog.setTitle(f'Merging {len(assetsToPatch)} data tables of {count} mod packages.')
       tools.prepare(packages)
       dialog.setStatus(self.tr('Unpacking data tables...'))

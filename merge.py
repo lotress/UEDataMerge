@@ -371,6 +371,9 @@ class Tools:
       for asset in assets:
         assetMap.setdefault(asset, []).append(p)
     return assetMap, count
+  def filterPackages(self, packages, assetsToPatch):
+    s = set(sum(assetsToPatch.values(), []))
+    return [package for package in packages if package in s]
   def unpack(self, modPath, package):
     if osp.isfile(modPath):
       modPaths = [modPath]

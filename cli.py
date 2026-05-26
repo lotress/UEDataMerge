@@ -50,6 +50,7 @@ def merge(app, tools, args):
   packages = tools.listPackages(tools.modFolder)
   assetsToPatch, count = tools.getAssetsToPatch(packages)
   assetsToPatch = tools.mixinUserMods(assetsToPatch, args.all)
+  packages = tools.filterPackages(packages, assetsToPatch)
   print(f'Merging {len(assetsToPatch)} data tables of {count} mod packages.')
   print('This may take servarl minutes, please wait.')
   print('Unpacking data tables...')
