@@ -61,7 +61,7 @@ def delNone(k):
     return 0
   return g
 traverse = lambda o, f: f(o) + sum(traverse(v, f) for v in o.values()) if isinstance(o, dict) else sum(traverse(i, f) for i in o) if isinstance(o, list) else 0
-shouldClip = lambda v, base: v.clipBy(base).isEmpty() if hasattr(v, 'clipBy') else v == base
+shouldClip = lambda v, base: v.clipBy(base).isEmpty() if hasattr(v, 'clipBy') else all(shouldClip(i, j) for i, j in zip(v, base)) if type(v) is list and len(v) == len(base) else v == base
 class DataItem:
   def __init__(self, data, path):
     self.changes = []
@@ -112,9 +112,13 @@ class DictItem(DataItem):
   def toValue(self):
     self.logChanges()
     return {k: toValue(v) for k, v in self.data.items()}
+  def isEmpty(self):
+    return set(self.data.keys()) <= {'Name'}
   def clipBy(self, base):
+    isNormal = self['Name'] != 'ID'
     for k in self.toDelete(base):
-      del self.data[k]
+      if k != 'Name' and (isNormal or k != 'Value'):
+        del self.data[k]
     return self
 class ListItem(DataItem):
   def __init__(self, data, path):
@@ -150,10 +154,11 @@ class ListItem(DataItem):
     return not (isinstance(self.data[k], StructItem) and isinstance(v, DictItem))
   def clipBy(self, base):
     for k in self.toDelete(base):
-      if isinstance(self.data[k], StructItem):
-        self.idSet.discard(self.data[k].id)
-        self.idMap.pop(self.data[k].id, None)
-      del self.data[k]
+      if k != 'ID':
+        if isinstance(self.data[k], StructItem):
+          self.idSet.discard(self.data[k].id)
+          self.idMap.pop(self.data[k].id, None)
+        del self.data[k]
     return self
 class StructItem(DictItem):
   def __init__(self, data, path):
@@ -171,12 +176,10 @@ class StructItem(DictItem):
         if item:
             item['Value'] = newId
   def isEmpty(self):
-    return set(self.data.keys()) <= {'Name', 'ID'}
+    return set(self['Value'].data.keys()) <= {'ID'}
   def clipBy(self, base):
-    if self.id != base.id:
-      raise ValueError(f'ID mismatch for struct {self.path}: {self.id} != {base.id}')
     for k in self.toDelete(base):
-      if k != 'ID' and k != 'Name':
+      if k != 'Name':
         del self.data[k]
     return self
 class UAsset(DictItem):
@@ -191,10 +194,11 @@ class UAsset(DictItem):
     if type(other) != UAsset:
       raise ValueError(f'Type mismatch: {type(self)} != {type(other)}')
     logger.info(f'Patching {self.assetPath} with {osp.join(other.baseFolder, other.assetPath)}')
-    if 'Exports' in self.data and 'Exports' in other.data and len(self.data['Exports']) == len(other.data['Exports']):
-      for i, v in enumerate(other.data['Exports']):
-        if hasattr(self.data['Exports'][i], 'patchBy'):
-          self.data['Exports'][i].patchBy(v)
+    this = self['Exports']
+    if this and 'Exports' in other.data and len(this) == len(other['Exports']):
+      for i, v in enumerate(other['Exports']):
+        if hasattr(this[i], 'patchBy'):
+          this[i].patchBy(v)
       del other.data['Exports']
     if 'NameMap' in self.data and 'NameMap' in other.data:
       self.data['NameMap'] = list({**dict.fromkeys(self.data['NameMap']), **dict.fromkeys(other.data['NameMap'])})
@@ -211,6 +215,16 @@ class UAsset(DictItem):
       else:
         raise ValueError(f'Invalid path: {path}')
     return current.toValue() if hasattr(current, 'toValue') else current
+  def clipBy(self, base):
+    this, that = self['Exports'], base['Exports']
+    if this and that and len(this) == len(that):
+      for i, v in enumerate(that):
+        if hasattr(this[i], 'clipBy'):
+          this[i].clipBy(v)
+    del self.data['Exports']
+    super().clipBy(base)
+    self.data['Exports'] = this
+    return self
 
 import subprocess
 
