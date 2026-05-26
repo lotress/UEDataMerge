@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from asyncio import tools
 from .merge import GameConfig, Tools, init, deduplicate
 import mobase # pyright: ignore[reportMissingModuleSource]
 from PyQt6.QtCore import QCoreApplication, qInfo, qWarning # type: ignore
