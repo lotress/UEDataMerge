@@ -193,7 +193,6 @@ class UAsset(DictItem):
   def patchBy(self, other):
     if type(other) != UAsset:
       raise ValueError(f'Type mismatch: {type(self)} != {type(other)}')
-    logger.info(f'Patching {self.assetPath} with {osp.join(other.baseFolder, other.assetPath)}')
     this = self['Exports']
     if this and 'Exports' in other.data and len(this) == len(other['Exports']):
       for i, v in enumerate(other['Exports']):
@@ -473,6 +472,7 @@ class Tools:
       else:
         print('Patching ' + osp.join(self.userPatchFolder, jsonPath))
       mod = UAsset(folder, jsonPath).clipBy(base)
+      logger.info(f'Patching {jsonPath} with {package}')
       result.patchBy(mod)
     dumpOpt = dict(indent=2) if self.DEBUG else dict(separators=(',', ':'))
     with open(osp.join(self.tempFolder, jsonPath), 'w') as fp:
