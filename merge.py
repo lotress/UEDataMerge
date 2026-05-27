@@ -503,7 +503,7 @@ def init():
   logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
   logger.propagate = False
   fileHandler = logging.FileHandler(paths.logPath, mode='w')
-  fileHandler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+  fileHandler.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
   logger.addHandler(fileHandler)
   app = PortableApp(paths.UAssetDataFolder, 'UAssetGUI')
   return paths, app, configData, DEBUG
