@@ -75,7 +75,7 @@ class DataItem:
     else:
       changeType = REPLACE if k in self.data else ADDITION
       if changeType is not REPLACE or self.data[k] != v:
-        self.changes.append((changeType, f'{self.path}.{k}', toValue(v)))
+        self.changes.append((changeType, f'{self.path}.{k}', toValue(v), self.data[k] if changeType == REPLACE else None))
         self.data[k] = v
   def __len__(self):
     return len(self.data)
@@ -90,8 +90,8 @@ class DataItem:
       else:
         self[k] = v
   def logChanges(self):
-    for changeType, path, newValue in self.changes:
-      logger.info(f'REPLACE {path} with {newValue}' if changeType == REPLACE else f'ADD {path} = {newValue}')
+    for changeType, path, *values in self.changes:
+      logger.info(f'REPLACE {path} from {values[1]} to {values[0]}' if changeType == REPLACE else f'ADD {path} = {values[0]}')
   def toDelete(self, base):
     if type(self) != type(base):
       return []
