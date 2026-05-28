@@ -47,7 +47,7 @@ def startup(paths, configData):
 
 def merge(app, tools, args):
   app.prepare()
-  packages = tools.listPackages(tools.modFolder)
+  packages = tools.listPackages(tools.gameFolder)
   assetsToPatch, count = tools.getAssetsToPatch(packages)
   assetsToPatch = tools.mixinUserMods(assetsToPatch, args.all)
   packages = tools.filterPackages(packages, assetsToPatch)
@@ -69,7 +69,7 @@ def merge(app, tools, args):
   app.cleanUp()
 
 def scan(tools):
-  packages = tools.listPackages(tools.modFolder)
+  packages = tools.listPackages(tools.gameFolder)
   assetsToPatch, count = tools.getAssetsToPatch(packages)
   assetsToPatch = tools.mixinUserMods(assetsToPatch)
   if not len(assetsToPatch):

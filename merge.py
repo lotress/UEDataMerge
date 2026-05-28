@@ -317,7 +317,7 @@ class Tools:
     os.makedirs(self.tempFolder)
     os.makedirs(self.outputFolder)
     os.makedirs(self.baseFolder)
-    packages = list(map(lambda p: osp.splitext(p)[0], packages))
+    packages = [osp.splitext(p)[0] for p in self.getPackagePaths(packages)]
     pp = list(filter(lambda p: p.endswith('_P'), packages))
     if not len(pp):
       pp = packages
@@ -334,6 +334,8 @@ class Tools:
     os.makedirs(osp.join(self.outputFolder, self.myName))
   def getPackExt(self):
     return '.utoc' if self.game.zen else '.pak'
+  def getModFolder(self):
+    return f'{self.game.ID}/Content/Paks/~mods/'
   def runAndCapture(self, cmd):
     result = subprocess.run(cmd, **subprocessArgs)
     if result.returncode != 0:
@@ -361,9 +363,15 @@ class Tools:
     assets = self.listAssetsZen(packFile) if self.game.zen else self.listAssetsLegacy(packFile)
     return [asset for asset in assets if self.filterAsset(asset)]
   def listPackages(self, folder):
+    folder = osp.join(folder, self.getModFolder())
     if not osp.exists(folder):
       return []
     return listFiles(self.getPackExt(), folder)
+  def getPackagePaths(self, packages):
+     s = self.getModFolder()
+     return [n[n.rfind(s) + len(s):] for n in packages]
+  def dedupPackages(self, packages):
+     return list(dict(zip(self.getPackagePaths(packages), packages)).values())
   def sortPackages(self, packages):
     if self.game.zen:
       pn = []
@@ -491,8 +499,6 @@ class Tools:
       logger.removeHandler(handler)
     os.replace(self.logPath, osp.join(dest, f'UEDataMerge-{now}.log'))
     return now
-
-deduplicate = lambda packages: list({osp.basename(n): n for n in packages}.values())
 
 def init():
   paths = Paths()

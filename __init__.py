@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 import logging
 
-from .merge import GameConfig, Tools, init, deduplicate
+from .merge import GameConfig, Tools, init
 import mobase # pyright: ignore[reportMissingModuleSource]
 from PyQt6.QtCore import QCoreApplication # type: ignore
 from PyQt6.QtGui import QIcon # type: ignore
 from PyQt6.QtWidgets import QMessageBox, QComboBox, QVBoxLayout, QHBoxLayout, QDialog, QCheckBox, QPushButton, QProgressBar, QLabel, QRadioButton, QLineEdit, QDialogButtonBox # type: ignore
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('UEDataMerge_Plugin')
 
 @dataclass
 class Args:
@@ -225,7 +225,7 @@ class Plugin(mobase.IPluginTool):
       yield modList.getMod(mod).absolutePath()
 
   def __getPackages(self):
-    return deduplicate(sum((self.__tools.listPackages(folder) for folder in self.__modFolders()), []))
+    return self.__tools.dedupPackages(sum((self.__tools.listPackages(folder) for folder in self.__modFolders()), []))
 
   def __saveSettings(self):
     self.setPluginSetting('game', self.__game)
