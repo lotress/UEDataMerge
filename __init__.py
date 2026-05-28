@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+import logging
 
 from .merge import GameConfig, Tools, init, deduplicate
 import mobase # pyright: ignore[reportMissingModuleSource]
-from PyQt6.QtCore import QCoreApplication, qInfo, qWarning # type: ignore
+from PyQt6.QtCore import QCoreApplication # type: ignore
 from PyQt6.QtGui import QIcon # type: ignore
 from PyQt6.QtWidgets import QMessageBox, QComboBox, QVBoxLayout, QHBoxLayout, QDialog, QCheckBox, QPushButton, QProgressBar, QLabel, QRadioButton, QLineEdit, QDialogButtonBox # type: ignore
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Args:
@@ -234,13 +237,13 @@ class Plugin(mobase.IPluginTool):
     assetsToPatch, count = tools.getAssetsToPatch(packages)
     assetsToPatch = tools.mixinUserMods(assetsToPatch)
     if not len(assetsToPatch):
-      qInfo('There are no data table mods to be merged.')
+      logger.info('There are no data table mods to be merged.')
       return
-    qInfo(f'There are {count} mod packages modifying {len(assetsToPatch)} data tables.')
+    logger.info(f'There are {count} mod packages modifying {len(assetsToPatch)} data tables.')
     for asset, mods in assetsToPatch.items():
-      qInfo(f'Data table {asset} will be modified by packages below:')
+      logger.info(f'Data table {asset} will be modified by packages below:')
       for mod in mods:
-        qInfo(f'-\t{mod if mod else 'user json file'}')
+        logger.info(f'-\t{mod if mod else 'user json file'}')
 
   def __merge(self):
     tools = self.__tools
@@ -277,9 +280,9 @@ class Plugin(mobase.IPluginTool):
       resultDialog = ResultDialog(tools.myName, self.__parentWidget)
       if resultDialog.exec() == QDialog.DialogCode.Accepted and resultDialog.shouldInstall():
         self.__createMod(resultDialog.modName())
-      qInfo(self.tr('Merge completed successfully!'))
+      logger.info(self.tr('Merge completed successfully!'))
     except Exception as e:
-      qWarning(str(e))
+      logger.warning(str(e))
     finally:
       try:
         tools.cleanUp()
