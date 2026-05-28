@@ -449,7 +449,7 @@ class Tools:
         assetsToPatch[mod] = [package]
     if not all:
       for k in list(assetsToPatch):
-        if len(assetsToPatch[k]) == 1:
+        if len(assetsToPatch[k]) == 1 and assetsToPatch[k][0] is not None:
           del assetsToPatch[k]
     return assetsToPatch
   def mixinUserMods(self, assetsToPatch, all=True):
