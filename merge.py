@@ -374,11 +374,12 @@ class Tools:
      return list(dict(zip(self.getPackagePaths(packages), packages)).values())
   def sortPackages(self, packages):
     if self.game.zen:
+      packages = dict(zip((p.lower() for p in self.getPackagePaths(packages)), packages))
       pn = []
       pp = []
       for p in packages:
-        (pp if getFileName(p).endswith('_P') else pn).append(p)
-      return sorted(pn) + sorted(pp)
+        (pp if getFileName(p).endswith('_p') else pn).append(p)
+      return [packages[k] for k in sorted(pn) + sorted(pp)]
     else:
       return sorted(packages, key=getChunkId)
   def getAssetsToPatch(self, packages):
