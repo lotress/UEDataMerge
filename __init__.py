@@ -255,7 +255,6 @@ class Plugin(mobase.IPluginTool):
       packages = self.__getPackages()
       assetsToPatch, count = tools.getAssetsToPatch(packages)
       assetsToPatch = tools.mixinUserMods(assetsToPatch, self.__args.all)
-      tools.prepare(packages)
       packages = tools.filterPackages(packages, assetsToPatch)
       dialog.setTitle(f'Merging {len(assetsToPatch)} data tables of {count} mod packages.')
       total = sum(map(len, assetsToPatch.values()))
@@ -263,6 +262,7 @@ class Plugin(mobase.IPluginTool):
       progress = 0
       dialog.setValue(progress)
       dialog.setStatus(self.tr('Unpacking data tables...'))
+      tools.prepare(packages)
       for package in packages:
         tools.unpack(package, package)
       tools.unpackBase(assetsToPatch)

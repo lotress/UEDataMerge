@@ -323,7 +323,7 @@ class Tools:
       pp = packages
     myName = 'merged_P'
     if self.game.zen:
-      latest = max(pp, default='')
+      latest = max((p.lower() for p in pp), default='')
       if myName <= latest:
         leading_tildes = len(latest) - len(latest.lstrip('~'))
         myName = '~' * (leading_tildes + 1) + myName
