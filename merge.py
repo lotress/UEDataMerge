@@ -492,7 +492,7 @@ class Tools:
       logger.info(f'Patching {jsonPath} with {package}')
       result.patchBy(mod)
     dumpOpt = dict(indent=2) if self.DEBUG else dict(separators=(',', ':'))
-    with open(osp.join(self.tempFolder, jsonPath), 'w') as fp:
+    with open(osp.join(self.tempFolder, jsonPath), 'w', encoding='utf-8') as fp:
       json.dump(result.toValue(), fp, **dumpOpt, ensure_ascii=False)
     self.fromjson(asset)
   def moveResult(self, dest):
@@ -517,7 +517,7 @@ def init():
   paths.update(configData.get('paths', {}))
   logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
   logger.propagate = False
-  fileHandler = logging.FileHandler(paths.logPath, mode='w')
+  fileHandler = logging.FileHandler(paths.logPath, mode='w', encoding='utf-8')
   fileHandler.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
   logger.addHandler(fileHandler)
   app = PortableApp(paths.UAssetDataFolder, 'UAssetGUI')
