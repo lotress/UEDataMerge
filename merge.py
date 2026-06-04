@@ -49,7 +49,7 @@ RegexPathPart = re.compile(r'([^[\]]+)|\[(\d+)\]')
 PrimitiveTypes = {int, str, float, bool, type(None)}
 REPLACE = 0
 ADDITION = 1
-isDataList = lambda v: isinstance(v, list) and all(isinstance(i, dict) and i.get('Name') is not None for i in v)
+isDataList = lambda v: isinstance(v, list) and len(v) and all(isinstance(i, dict) and i.get('Name') is not None for i in v)
 selectType = lambda v: StructItem if isDataList(v.get('Value')) and any(i['Name'] == 'ID' for i in v['Value']) else DictItem
 toValue = lambda v: v.toValue() if hasattr(v, 'toValue') else [i.toValue() if hasattr(i, 'toValue') else i for i in v] if isinstance(v, list) else v
 joinLists = lambda lists: sum(lists, []) if lists else []
@@ -82,7 +82,7 @@ class DataItem:
   def isEmpty(self):
     return len(self.data) == 0
   def typeMismatch(self, k, v):
-    return v is not None and self.data[k] is not None and type(v) not in PrimitiveTypes
+    return v is not None and self.data[k] is not None and type(v) not in PrimitiveTypes and self.data[k] != []
   def patchBy(self, other):
     for k, v in other.data.items():
       if k in self.data and type(self.data[k]) != type(v) and self.typeMismatch(k, v):
@@ -186,7 +186,7 @@ class UAsset(DictItem):
   def __init__(self, baseFolder, assetPath):
     self.baseFolder = baseFolder
     self.assetPath = assetPath
-    with open(osp.join(baseFolder, assetPath), 'r') as fp:
+    with open(osp.join(baseFolder, assetPath), 'r', encoding='utf-8') as fp:
       data = json.load(fp)
     traverse(data, delNone('PropertyTypeName'))
     super().__init__(data, '')
@@ -417,7 +417,9 @@ class Tools:
         self.unpackLegacy(p, '', True, assets=assets)
   def unpackLegacy(self, modPath, modName, base=False, assets=None):
     allAssets = set(self.listAssetsLegacy(modPath))
-    assets = [] if assets is None else ['-f'] + joinLists(['-i', p] for p in map(getWildcardPath, assets) if p in allAssets)
+    assets = [] if assets is None else ['-f'] + joinLists(['-i', getWildcardPath(p)] for p in assets if p in allAssets)
+    if len(assets) == 1:
+      return
     output = osp.join(self.baseFolder if base else self.outputFolder, modName)
     os.makedirs(output, exist_ok=True)
     self.runAndCapture([self.repakPath, '-g', self.game.ID, 'unpack', *assets, '-o', output, modPath])
