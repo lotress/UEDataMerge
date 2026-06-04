@@ -12,7 +12,7 @@ class GameConfig:
   name: str
   ID: str
   engineVersion: str
-  mapName: str = 'Mappings'
+  mapName: str = None
   version: str = None
   repakPackOptions: list = field(default_factory=list)
   zen: bool = False
@@ -299,7 +299,7 @@ class Tools:
     self.basePakFolder = osp.join(self.gameFolder, f'{self.game.ID}/Content/Paks')
     self.modFolder = osp.join(self.basePakFolder, '~mods')
   def getMapName(self):
-    return f'{self.game.mapName}_{self.game.version}' if self.game.version else self.game.mapName
+    return (f'{self.game.mapName}_{self.game.version}' if self.game.version else self.game.mapName) if self.game.mapName else None
   def getBasePacks(self):
     return [osp.join(self.basePakFolder, f) for f in next(os.walk(self.basePakFolder))[2] if f.endswith(self.getPackExt())]
   def checkGame(self):
@@ -438,12 +438,18 @@ class Tools:
     uassetPath = osp.join(self.outputFolder, modName, getUassetPath(asset)) if modName else osp.join(self.baseFolder, getUassetPath(asset))
     jsonPath = osp.join(self.tempFolder, getJsonPath(asset))
     os.makedirs(osp.dirname(jsonPath), exist_ok=True)
-    self.runAndCapture(['dotnet', self.UAssetCLIPath, 'tojson', uassetPath, jsonPath, f'VER_UE{self.game.engineVersion}', self.getMapName()])
+    cmd = ['dotnet', self.UAssetCLIPath, 'tojson', uassetPath, jsonPath, f'VER_UE{self.game.engineVersion}']
+    mapName = self.getMapName()
+    cmd = cmd + [mapName] if mapName else cmd
+    self.runAndCapture(cmd)
   def fromjson(self, asset):
     jsonPath = osp.join(self.tempFolder, getJsonPath(asset))
     uassetPath = osp.join(self.outputFolder, self.myName, getUassetPath(asset))
     os.makedirs(osp.dirname(uassetPath), exist_ok=True)
-    self.runAndCapture(['dotnet', self.UAssetCLIPath, 'fromjson', jsonPath, uassetPath, self.getMapName()])
+    cmd = ['dotnet', self.UAssetCLIPath, 'fromjson', jsonPath, uassetPath]
+    mapName = self.getMapName()
+    cmd = cmd + [mapName] if mapName else cmd
+    self.runAndCapture(cmd)
   def toZen(self):
     self.runAndCapture([self.retocPath, 'to-zen', '--version', f'UE{self.game.engineVersion}', osp.join(self.outputFolder, self.myName), osp.join(self.resultFolder, f'{self.myName}.utoc')])
   def repackLegacy(self):
