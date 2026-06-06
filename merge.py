@@ -120,15 +120,43 @@ class DictItem(DataItem):
       if k != 'Name' and (isNormal or k != 'Value'):
         del self.data[k]
     return self
+class DeleteLists():
+  def __init__(self):
+    # map object id -> (container, [i, ...])
+    self.lists = {}
+  def markDeletion(self, a, i):
+    key = id(a)
+    if not key in self.lists:
+      self.lists[key] = (a, [])
+    entry = self.lists.get(key)
+    entry[1].append(i)
+  def execute(self):
+    for entry in self.lists.values():
+      a = entry[0]
+      a[:] = [v for i, v in enumerate(a) if i not in entry[1]]
 class ListItem(DataItem):
   def __init__(self, data, path):
     super().__init__(data, path)
-    self.data = {v['Name']: selectType(v)(v, f'{path}.{v.get('Name')}') for v in data}
-    structItems = [v for v in self.data.values() if isinstance(v, StructItem) and v.id is not None]
+    self.data = [selectType(v)(v, f'{path}.{v.get("Name")}[{i}]') for i, v in enumerate(data)]
+    structItems = [v for v in self.data if isinstance(v, StructItem) and v.id is not None]
+    self.nameMap = {}
+    for i, v in enumerate(self.data):
+      self.nameMap.setdefault(v['Name'], []).append((v, i))
+    for k, c in self.nameMap.items():
+      self.nameMap[k] = [(i, *t) for i, t in enumerate(c)]
     self.idSet = set(v.id for v in structItems)
     self.idMap = {v.id: v for v in structItems}
   def __getitem__(self, key):
-    return self.data.get(key)
+    if isinstance(key, int):
+      return self.data[key]
+    if isinstance(key, str):
+      items = self.nameMap.get(key)
+      if not items:
+        return None
+      if len(items) > 1:
+        raise ValueError(f"Ambiguous Name '{key}' in list at {self.path}; duplicate entries exist")
+      return items[0]
+    raise KeyError(f'Invalid list key: {key}')
   def setNewId(self, item):
       if item.id in self.idSet or item.id is None:
           newId = max(self.idSet, default=0) + 1
@@ -137,28 +165,56 @@ class ListItem(DataItem):
           newId = item.id
       self.idSet.add(newId)
       self.idMap[newId] = item
-  def __setitem__(self, key, newValue):
-    if key in self.data:
-      if isinstance(newValue, StructItem) and newValue.id != self.data[key].id:
-        newValue.setId(self.data[key].id)
-      super().__setitem__(key, newValue)
-    else:
-      self.changes.append((ADDITION, f'{self.path}.{key}', toValue(newValue)))
-      self.data[key] = newValue
-      if isinstance(newValue, StructItem):
-        self.setNewId(newValue)
   def toValue(self):
     self.logChanges()
-    return [v.toValue() for v in self.data.values()]
-  def typeMismatch(self, k, v):
-    return not (isinstance(self.data[k], StructItem) and isinstance(v, DictItem))
+    return [v.toValue() for v in self.data]
+  def typeMismatch(self, v0, v1):
+    return type(v0) != type(v1) and not (isinstance(v0, StructItem) and isinstance(v1, DictItem))
+  def __setitem__(self, *_):
+    raise RuntimeError('Method not implemented')
+  def patchBy(self, other):
+    if type(other) != ListItem:
+      raise ValueError(f'Type mismatch: {type(self)} != {type(other)}')
+    for k, c1 in other.nameMap.items():
+      if not k in self.nameMap:
+        self.nameMap[k] = []
+      c0 = self.nameMap[k]
+      for i, v1, _ in c1:
+        if i < len(c0):
+          _, v0, i0 = c0[i]
+          if isinstance(v1, StructItem) and v1.id != v0.id:
+            v1.setId(v0.id)
+          if hasattr(v0, 'patchBy'):
+            v0.patchBy(v1)
+          elif self.typeMismatch(v0, v1):
+            raise ValueError(f'Type mismatch for item {self.path}.{k}[{i}]: {type(v0)} != {type(v1)}')
+          else:
+            c0[i] = self.data[i0] = v1
+            self.changes.append((REPLACE, f'{self.path}.{k}[{i}]', toValue(v1), v0))
+        else:
+          if isinstance(v1, StructItem):
+            self.setNewId(v1)
+          self.changes.append((ADDITION, f'{self.path}.{k}', toValue(v1)))
+          i0 = len(self.data)
+          self.data.append(v1)
+          c0.append((i, v1, i0)) # i单调增且data不删除故i有效且对齐
+  def toDelete(self, base):
+    if type(self) != type(base):
+      return []
+    check = lambda v0, v1: type(v0) == type(v1) and shouldClip(v0, v1)
+    return sum(([t0 for t0, t1 in zip(candidates, base.nameMap[k]) if check(t0[1], t1[1])] for k, candidates in self.nameMap.items() if k in base.nameMap), [])
   def clipBy(self, base):
-    for k in self.toDelete(base):
-      if k != 'ID':
-        if isinstance(self.data[k], StructItem):
-          self.idSet.discard(self.data[k].id)
-          self.idMap.pop(self.data[k].id, None)
-        del self.data[k]
+    dl = DeleteLists()
+    for t in self.toDelete(base):
+      v = t[1]
+      if v['Name'] != 'ID':
+        if isinstance(v, StructItem):
+          self.idSet.discard(v.id)
+          self.idMap.pop(v.id, None)
+        # clipBy与toDelete仅调用1次故t[0], t[2]必与base对齐
+        dl.markDeletion(self.data, t[2])
+        dl.markDeletion(self.nameMap[v['Name']], t[0])
+    dl.execute()
     return self
 class StructItem(DictItem):
   def __init__(self, data, path):
