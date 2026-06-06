@@ -49,7 +49,7 @@ RegexPathPart = re.compile(r'([^[\]]+)|\[(\d+)\]')
 PrimitiveTypes = {int, str, float, bool, type(None)}
 REPLACE = 0
 ADDITION = 1
-isDataList = lambda v: isinstance(v, list) and len(v) and all(isinstance(i, dict) and i.get('Name') is not None for i in v)
+isDataList = lambda v: isinstance(v, list) and all(isinstance(i, dict) and i.get('Name') is not None for i in v)
 selectType = lambda v: StructItem if isDataList(v.get('Value')) and any(i['Name'] == 'ID' for i in v['Value']) else DictItem
 toValue = lambda v: v.toValue() if hasattr(v, 'toValue') else [i.toValue() if hasattr(i, 'toValue') else i for i in v] if isinstance(v, list) else v
 joinLists = lambda lists: sum(lists, []) if lists else []
@@ -86,7 +86,7 @@ class DataItem:
   def patchBy(self, other):
     for k, v in other.data.items():
       if k in self.data and type(self.data[k]) != type(v) and self.typeMismatch(k, v):
-        raise ValueError(f'Type mismatch for item {self.path}.{k}: {type(self.data[k])} != {type(v)}')
+        raise ValueError(f'Type mismatch for item {self.path}.{k}: {type(self.data[k])} != {type(v)}, {v}')
       else:
         self[k] = v
   def logChanges(self):
@@ -155,7 +155,7 @@ class ListItem(DataItem):
         return None
       if len(items) > 1:
         raise ValueError(f"Ambiguous Name '{key}' in list at {self.path}; duplicate entries exist")
-      return items[0]
+      return items[0][1]
     raise KeyError(f'Invalid list key: {key}')
   def setNewId(self, item):
       if item.id in self.idSet or item.id is None:
@@ -189,7 +189,8 @@ class ListItem(DataItem):
           elif self.typeMismatch(v0, v1):
             raise ValueError(f'Type mismatch for item {self.path}.{k}[{i}]: {type(v0)} != {type(v1)}')
           else:
-            c0[i] = self.data[i0] = v1
+            self.data[i0] = v1
+            c0[i] = (i, v1, i0)
             self.changes.append((REPLACE, f'{self.path}.{k}[{i}]', toValue(v1), v0))
         else:
           if isinstance(v1, StructItem):
@@ -232,7 +233,8 @@ class StructItem(DictItem):
         if item:
             item['Value'] = newId
   def isEmpty(self):
-    return set(self['Value'].data.keys()) <= {'ID'}
+    data = self['Value'].nameMap if isinstance(self['Value'], ListItem) else self['Value'].data
+    return set(data.keys()) <= {'ID'}
   def clipBy(self, base):
     for k in self.toDelete(base):
       if k != 'Name':
