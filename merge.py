@@ -46,7 +46,6 @@ class Paths:
       self.__dict__[k] = osp.join(self.__me, v)
 
 RegexPathPart = re.compile(r'([^[\]]+)|\[(\d+)\]')
-PrimitiveTypes = {int, str, float, bool, type(None)}
 REPLACE = 0
 ADDITION = 1
 isDataList = lambda v: isinstance(v, list) and all(isinstance(i, dict) and i.get('Name') is not None for i in v)
@@ -81,14 +80,9 @@ class DataItem:
     return len(self.data)
   def isEmpty(self):
     return len(self.data) == 0
-  def typeMismatch(self, k, v):
-    return v is not None and self.data[k] is not None and type(v) not in PrimitiveTypes and self.data[k] != []
   def patchBy(self, other):
     for k, v in other.data.items():
-      if k in self.data and type(self.data[k]) != type(v) and self.typeMismatch(k, v):
-        raise ValueError(f'Type mismatch for item {self.path}.{k}: {type(self.data[k])} != {type(v)}, {v}')
-      else:
-        self[k] = v
+      self[k] = v
   def logChanges(self):
     for changeType, path, *values in self.changes:
       logger.info(f'REPLACE {path} from {values[1]} to {values[0]}' if changeType == REPLACE else f'ADD {path} = {values[0]}')
@@ -168,8 +162,6 @@ class ListItem(DataItem):
   def toValue(self):
     self.logChanges()
     return [v.toValue() for v in self.data]
-  def typeMismatch(self, v0, v1):
-    return type(v0) != type(v1) and not (isinstance(v0, StructItem) and isinstance(v1, DictItem))
   def __setitem__(self, *_):
     raise RuntimeError('Method not implemented')
   def patchBy(self, other):
@@ -186,8 +178,6 @@ class ListItem(DataItem):
             v1.setId(v0.id)
           if hasattr(v0, 'patchBy'):
             v0.patchBy(v1)
-          elif self.typeMismatch(v0, v1):
-            raise ValueError(f'Type mismatch for item {self.path}.{k}[{i}]: {type(v0)} != {type(v1)}')
           else:
             self.data[i0] = v1
             c0[i] = (i, v1, i0)
