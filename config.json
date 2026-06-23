@@ -2,7 +2,7 @@
   "debug": true,
   "paths": {
     "logPath": "output/log.txt",
-    "UAssetCLIPath": "tools/UAssetCLI/UAssetCLI.dll",
+    "UAssetCLIPath": "tools/UAssetGUI/UAssetGUI.exe",
     "retocPath": "tools/retoc.exe",
     "repakPath": "tools/repak.exe",
     "UAssetDataFolder": "tools/Data",

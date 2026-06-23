@@ -136,7 +136,7 @@ The [tools](tools) directory includes:
 
 trumank's [repak](https://github.com/trumank/repak/releases/tag/v0.2.3), used for unpacking/packing non-zen mode game assets.
 
-jpabscale's [UAssetCLI](https://github.com/jpabscale/UAssetCLI/releases/tag/v1.0.4), used for bidirectional conversion between .uasset and .json.
+atenfyr's [UAssetGUI](https://github.com/atenfyr/UAssetGUI/releases/tag/experimental-latest), used for bidirectional conversion between .uasset and .json.
 
 Thanks to all the above projects.
 
@@ -146,6 +146,6 @@ Thanks to all the above projects.
 
 trumank的[repak](https://github.com/trumank/repak/releases/tag/v0.2.3)，用于解包/打包非zen模式的游戏资产。
 
-jpabscale的[UAssetCLI](https://github.com/jpabscale/UAssetCLI/releases/tag/v1.0.4)，用于.uasset与.json双向转换。
+atenfyr的[UAssetGUI](https://github.com/atenfyr/UAssetGUI/releases/tag/experimental-latest)，用于.uasset与.json双向转换。
 
 向以上所有项目表示感谢。

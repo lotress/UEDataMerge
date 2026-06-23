@@ -36,7 +36,7 @@ class Paths:
     self.baseFolder = osp.join(me, 'output/base')
     self.userPatchFolder = osp.join(me, 'patches')
     self.resultFolder = osp.join(me, 'output')
-    self.UAssetCLIPath = osp.join(me, 'tools/UAssetCLI/UAssetCLI.dll')
+    self.UAssetCLIPath = osp.join(me, 'tools/UAssetGUI/UAssetGUI.exe')
     self.retocPath = osp.join(me, 'tools/retoc.exe')
     self.repakPath = osp.join(me, 'tools/repak.exe')
     self.UAssetDataFolder = osp.join(me, 'tools/Data')
@@ -488,7 +488,7 @@ class Tools:
     uassetPath = osp.join(self.outputFolder, modName, getUassetPath(asset)) if modName else osp.join(self.baseFolder, getUassetPath(asset))
     jsonPath = osp.join(self.tempFolder, getJsonPath(asset))
     os.makedirs(osp.dirname(jsonPath), exist_ok=True)
-    cmd = ['dotnet', self.UAssetCLIPath, 'tojson', uassetPath, jsonPath, f'VER_UE{self.game.engineVersion}']
+    cmd = [self.UAssetCLIPath, 'tojson', uassetPath, jsonPath, f'VER_UE{self.game.engineVersion}']
     mapName = self.getMapName()
     cmd = cmd + [mapName] if mapName else cmd
     self.runAndCapture(cmd)
@@ -496,7 +496,7 @@ class Tools:
     jsonPath = osp.join(self.tempFolder, getJsonPath(asset))
     uassetPath = osp.join(self.outputFolder, self.myName, getUassetPath(asset))
     os.makedirs(osp.dirname(uassetPath), exist_ok=True)
-    cmd = ['dotnet', self.UAssetCLIPath, 'fromjson', jsonPath, uassetPath]
+    cmd = [self.UAssetCLIPath, 'fromjson', jsonPath, uassetPath]
     mapName = self.getMapName()
     cmd = cmd + [mapName] if mapName else cmd
     self.runAndCapture(cmd)
